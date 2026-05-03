@@ -7,9 +7,10 @@ type Song struct {
 }
 
 type QuestionRequest struct {
-	FragmentLength     float64  `json:"fragment_length"`
-	BroadCategories    []string `json:"broad_categories"`
-	DetailedCategories []string `json:"detailed_categories"`
+	FragmentLength           float64  `json:"fragment_length"`
+	BroadCategories          []string `json:"broad_categories"`
+	DetailedCategories       []string `json:"detailed_categories"`
+	ExceptDetailedCategories []string `json:"except_detailed_categories"`
 }
 
 type QuestionResponse struct {

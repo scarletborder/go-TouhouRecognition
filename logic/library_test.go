@@ -41,3 +41,45 @@ func TestLoadTHWikiLibraryRejectsNonTHWikiURL(t *testing.T) {
 		t.Fatal("LoadTHWikiLibrary returned nil error for non-THWiki URL")
 	}
 }
+
+func TestAllowedWorksExcludesDetailedCategoriesAfterSelection(t *testing.T) {
+	library := Library{
+		workSet: map[string]struct{}{
+			"东方红魔乡": {},
+			"东方妖妖梦": {},
+			"东方永夜抄": {},
+		},
+	}
+	service := NewService(library)
+
+	works, err := service.allowedWorks(
+		[]string{BroadMainlineDanmaku},
+		[]string{"东方红魔乡", "东方妖妖梦"},
+		[]string{"东方妖妖梦"},
+	)
+	if err != nil {
+		t.Fatalf("allowedWorks returned error: %v", err)
+	}
+	if _, ok := works["东方红魔乡"]; !ok {
+		t.Fatal("allowedWorks excluded 东方红魔乡, want it included")
+	}
+	if _, ok := works["东方妖妖梦"]; ok {
+		t.Fatal("allowedWorks included 东方妖妖梦, want it excluded")
+	}
+	if len(works) != 1 {
+		t.Fatalf("allowedWorks returned %d works, want 1", len(works))
+	}
+}
+
+func TestAllowedWorksRejectsUnknownExceptDetailedCategory(t *testing.T) {
+	library := Library{
+		workSet: map[string]struct{}{
+			"东方红魔乡": {},
+		},
+	}
+	service := NewService(library)
+
+	if _, err := service.allowedWorks(nil, nil, []string{"不存在的作品"}); err == nil {
+		t.Fatal("allowedWorks returned nil error for unknown except detailed category")
+	}
+}

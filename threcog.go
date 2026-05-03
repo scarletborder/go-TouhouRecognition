@@ -9,9 +9,18 @@ import (
 )
 
 const (
-	BroadAll             = logic.BroadAll
-	BroadMainlineDanmaku = logic.BroadMainlineDanmaku
-	BroadPC98            = logic.BroadPC98
+	BroadAll                   = logic.BroadAll
+	BroadMainlineDanmaku       = logic.BroadMainlineDanmaku
+	BroadPC98                  = logic.BroadPC98
+	BroadDecimalShootingGames  = logic.BroadDecimalShootingGames
+	BroadTwilightFrontierWorks = logic.BroadTwilightFrontierWorks
+	BroadTH06To09              = logic.BroadTH06To09
+	BroadTH10To12              = logic.BroadTH10To12
+	BroadTH13To15              = logic.BroadTH13To15
+	BroadTH16To19              = logic.BroadTH16To19
+	BroadCD                    = logic.BroadCD
+	BroadBooks                 = logic.BroadBooks
+	BroadLenEn                 = logic.BroadLenEn
 )
 
 type (

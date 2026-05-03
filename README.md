@@ -104,15 +104,25 @@ Broad category constants:
 threcog.BroadAll
 threcog.BroadMainlineDanmaku
 threcog.BroadPC98
+threcog.BroadDecimalShootingGames
+threcog.BroadTwilightFrontierWorks
+threcog.BroadTH06To09
+threcog.BroadTH10To12
+threcog.BroadTH13To15
+threcog.BroadTH16To19
+threcog.BroadCD
+threcog.BroadBooks
+threcog.BroadLenEn
 ```
 
 ## Generate a Question
 
 ```go
 question, err := svc.GenerateQuestion(ctx, threcog.QuestionRequest{
-	FragmentLength:     10,
-	BroadCategories:    []string{threcog.BroadMainlineDanmaku},
-	DetailedCategories: []string{"东方红魔乡"},
+	FragmentLength:           10,
+	BroadCategories:          []string{threcog.BroadMainlineDanmaku},
+	DetailedCategories:       []string{"东方红魔乡", "东方妖妖梦"},
+	ExceptDetailedCategories: []string{"东方妖妖梦"},
 })
 ```
 
@@ -123,6 +133,7 @@ Request fields:
 | `FragmentLength` | Audio length in seconds. Default `10`, max `120` |
 | `BroadCategories` | Empty or `BroadAll` means all works |
 | `DetailedCategories` | Work names that exist in the CSV, such as `东方红魔乡` |
+| `ExceptDetailedCategories` | Work names to remove from the final selected works |
 
 Useful response fields:
 
@@ -198,4 +209,3 @@ No existing public `logic` functions or types were removed.
 ```bash
 go test ./...
 ```
-

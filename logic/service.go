@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -29,15 +30,17 @@ func (s *Service) Health() HealthResponse {
 }
 
 func (s *Service) Categories() CategoriesResponse {
-	groups := map[string][]string{
-		BroadAll:             s.library.Works(),
-		BroadMainlineDanmaku: existingWorksOnly(s.library.workSet, broadCategoryWorks[BroadMainlineDanmaku]),
-		BroadPC98:            existingWorksOnly(s.library.workSet, broadCategoryWorks[BroadPC98]),
+	groups := map[string][]string{BroadAll: s.library.Works()}
+	for _, broad := range broadCategoryOrder {
+		if broad == BroadAll {
+			continue
+		}
+		groups[broad] = existingWorksOnly(s.library.workSet, broadCategoryWorks[broad])
 	}
 
 	return CategoriesResponse{
 		Source:             "THWiki",
-		BroadCategories:    []string{BroadAll, BroadMainlineDanmaku, BroadPC98},
+		BroadCategories:    append([]string(nil), broadCategoryOrder...),
 		DetailedCategories: s.library.Works(),
 		Groups:             groups,
 		SongCount:          s.library.SongCount(),
@@ -104,7 +107,7 @@ func (s *Service) GenerateQuestion(ctx context.Context, req QuestionRequest) (Qu
 }
 
 func (s *Service) filterSongs(req QuestionRequest) ([]Song, error) {
-	allowedWorks, err := s.allowedWorks(req.BroadCategories, req.DetailedCategories)
+	allowedWorks, err := s.allowedWorks(req.BroadCategories, req.DetailedCategories, req.ExceptDetailedCategories)
 	if err != nil {
 		return nil, err
 	}
@@ -118,9 +121,10 @@ func (s *Service) filterSongs(req QuestionRequest) ([]Song, error) {
 	return songs, nil
 }
 
-func (s *Service) allowedWorks(broadCategories, detailedCategories []string) (map[string]struct{}, error) {
+func (s *Service) allowedWorks(broadCategories, detailedCategories, exceptDetailedCategories []string) (map[string]struct{}, error) {
 	broadCategories = cleanList(broadCategories)
 	detailedCategories = cleanList(detailedCategories)
+	exceptDetailedCategories = cleanList(exceptDetailedCategories)
 
 	base := map[string]struct{}{}
 	if len(broadCategories) == 0 || contains(broadCategories, BroadAll) {
@@ -131,7 +135,7 @@ func (s *Service) allowedWorks(broadCategories, detailedCategories []string) (ma
 		for _, broad := range broadCategories {
 			works, ok := broadCategoryWorks[broad]
 			if !ok {
-				return nil, badRequest(fmt.Sprintf("unknown broad category %q; allowed: %s, %s, %s", broad, BroadAll, BroadMainlineDanmaku, BroadPC98))
+				return nil, badRequest(fmt.Sprintf("unknown broad category %q; allowed: %s", broad, strings.Join(broadCategoryOrder, ", ")))
 			}
 			for _, work := range works {
 				if _, exists := s.library.workSet[work]; exists {
@@ -141,18 +145,27 @@ func (s *Service) allowedWorks(broadCategories, detailedCategories []string) (ma
 		}
 	}
 
-	if len(detailedCategories) == 0 {
-		return base, nil
+	for _, exceptDetail := range exceptDetailedCategories {
+		if _, ok := s.library.workSet[exceptDetail]; !ok {
+			return nil, badRequest(fmt.Sprintf("unknown except detailed category %q", exceptDetail))
+		}
 	}
 
-	detailSet := map[string]struct{}{}
-	for _, detail := range detailedCategories {
-		if _, ok := s.library.workSet[detail]; !ok {
-			return nil, badRequest(fmt.Sprintf("unknown detailed category %q", detail))
-		}
-		if _, inBase := base[detail]; inBase {
-			detailSet[detail] = struct{}{}
+	final := base
+	if len(detailedCategories) > 0 {
+		final = map[string]struct{}{}
+		for _, detail := range detailedCategories {
+			if _, ok := s.library.workSet[detail]; !ok {
+				return nil, badRequest(fmt.Sprintf("unknown detailed category %q", detail))
+			}
+			if _, inBase := base[detail]; inBase {
+				final[detail] = struct{}{}
+			}
 		}
 	}
-	return detailSet, nil
+
+	for _, exceptDetail := range exceptDetailedCategories {
+		delete(final, exceptDetail)
+	}
+	return final, nil
 }

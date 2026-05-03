@@ -1,4 +1,4 @@
-`go-TouhouRecognition` 是从 [XiaoGeNekidora/TouhouSongRecognitiveTest](https://github.com/XiaoGeNekidora/TouhouSongRecognitiveTest) 中拆出的 Go 逻辑模块，面向未来机器人项目复用。它只保留 THWiki 源，负责曲库加载、分类筛选、随机出题、音频片段裁剪和答案模糊验证。
+[简体中文](./README_CN.md)
 
 # go-TouhouRecognition
 

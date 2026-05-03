@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test
+        run: go test ./...
+
+  release:
+    name: GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build source archives
+        run: |
+          git archive --format=tar.gz --prefix=go-TouhouRecognition-${GITHUB_REF_NAME}/ -o go-TouhouRecognition-${GITHUB_REF_NAME}.tar.gz ${GITHUB_REF_NAME}
+          git archive --format=zip --prefix=go-TouhouRecognition-${GITHUB_REF_NAME}/ -o go-TouhouRecognition-${GITHUB_REF_NAME}.zip ${GITHUB_REF_NAME}
+          sha256sum go-TouhouRecognition-${GITHUB_REF_NAME}.tar.gz go-TouhouRecognition-${GITHUB_REF_NAME}.zip > checksums.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            go-TouhouRecognition-${{ github.ref_name }}.tar.gz
+            go-TouhouRecognition-${{ github.ref_name }}.zip
+            checksums.txt
+          generate_release_notes: true
+
+  index-go-dev:
+    name: Request go.dev indexing
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Ask Go proxy to fetch this version
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GONOSUMDB: ""
+        run: go list -m github.com/XiaoGeNekidora/go-TouhouRecognition@${GITHUB_REF_NAME}

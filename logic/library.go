@@ -18,7 +18,7 @@ const (
 	BroadTH06To09              = "TH06-09"
 	BroadTH10To12              = "TH10-12"
 	BroadTH13To15              = "TH13-15"
-	BroadTH16To19              = "TH16-19"
+	BroadTH16To20              = "TH16-19"
 	BroadCD                    = "CD"
 	BroadBooks                 = "书籍"
 	BroadLenEn                 = "连缘"
@@ -33,7 +33,7 @@ var broadCategoryOrder = []string{
 	BroadTH06To09,
 	BroadTH10To12,
 	BroadTH13To15,
-	BroadTH16To19,
+	BroadTH16To20,
 	BroadCD,
 	BroadBooks,
 	BroadLenEn,
@@ -99,11 +99,12 @@ var broadCategoryWorks = map[string][]string{
 		"东方辉针城",
 		"东方绀珠传",
 	},
-	BroadTH16To19: {
+	BroadTH16To20: {
 		"东方天空璋",
 		"东方鬼形兽",
 		"东方虹龙洞",
 		"东方兽王园",
+		"东方锦上京",
 	},
 	BroadCD: {
 		"蓬莱人形",
@@ -118,6 +119,7 @@ var broadCategoryWorks = map[string][]string{
 		"旧约酒馆",
 		"虹色的北斗七星",
 		"七夕坂梦幻能",
+		"灵长新益京",
 	},
 	BroadBooks: {
 		"东方文花帖（书籍）",

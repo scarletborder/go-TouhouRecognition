@@ -17,7 +17,7 @@ const (
 	BroadTH06To09              = logic.BroadTH06To09
 	BroadTH10To12              = logic.BroadTH10To12
 	BroadTH13To15              = logic.BroadTH13To15
-	BroadTH16To19              = logic.BroadTH16To19
+	BroadTH16To20              = logic.BroadTH16To20
 	BroadCD                    = logic.BroadCD
 	BroadBooks                 = logic.BroadBooks
 	BroadLenEn                 = logic.BroadLenEn

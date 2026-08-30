@@ -5,7 +5,7 @@ package threcog
 import (
 	"context"
 
-	"github.com/XiaoGeNekidora/go-TouhouRecognition/logic"
+	"github.com/scarletborder/go-TouhouRecognition/logic"
 )
 
 const (

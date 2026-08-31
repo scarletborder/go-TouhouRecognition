@@ -64,6 +64,18 @@ type CategoriesResponse struct {
 	SongCount          int                 `json:"song_count"`
 }
 
+// WorksForBroadCategoryRequest 获取指定广泛分类对应作品的请求参数
+type WorksForBroadCategoryRequest struct {
+	BroadCategory string  `json:"broad_category"`
+}
+
+// WorksForBroadCategoryResponse 获取指定广泛分类对应作品的响应结果
+type WorksForBroadCategoryResponse struct {
+	BroadCategory string   `json:"broad_category"`
+	Works         []string `json:"works"`
+	Found         bool     `json:"found"`
+}
+
 type HealthResponse struct {
 	OK        bool   `json:"ok"`
 	Source    string `json:"source"`

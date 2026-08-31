@@ -364,6 +364,60 @@ func (l Library) CategoryWorks(broadCategory string) []string {
 	return nil
 }
 
+func (l Library) GetWorksForBroadCategory(req WorksForBroadCategoryRequest) WorksForBroadCategoryResponse {
+	rawCat := strings.TrimSpace(req.BroadCategory)
+	if rawCat == "" {
+		return WorksForBroadCategoryResponse{
+			BroadCategory: rawCat,
+			Works:         nil,
+			Found:         false,
+		}
+	}
+
+	// 1. 首先尝试直接匹配调用 Library 提供的 CategoryWorks 方法
+	if works := l.CategoryWorks(rawCat); len(works) > 0 {
+		return WorksForBroadCategoryResponse{
+			BroadCategory: rawCat,
+			Works:         works,
+			Found:         true,
+		}
+	}
+
+	// 2. 忽略大小写及中划线/下划线（如 th06-to-09 与 TH06To09）从 Library 分类列表中查找实际标准名称
+	cleanKey := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(rawCat, "-", ""), "_", ""))
+	for _, cat := range l.Categories() {
+		cleanCat := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(cat, "-", ""), "_", ""))
+		if cleanCat == cleanKey {
+			works := l.CategoryWorks(cat)
+			return WorksForBroadCategoryResponse{
+				BroadCategory: cat,
+				Works:         works,
+				Found:         true,
+			}
+		}
+	}
+
+	// 3. 模糊包含匹配
+	for _, cat := range l.Categories() {
+		catLower := strings.ToLower(cat)
+		rawLower := strings.ToLower(rawCat)
+		if strings.Contains(catLower, rawLower) || strings.Contains(rawLower, catLower) {
+			works := l.CategoryWorks(cat)
+			return WorksForBroadCategoryResponse{
+				BroadCategory: cat,
+				Works:         works,
+				Found:         true,
+			}
+		}
+	}
+
+	return WorksForBroadCategoryResponse{
+		BroadCategory: rawCat,
+		Works:         nil,
+		Found:         false,
+	}
+}
+
 func isCSVHeader(index int, record []string, expectedFields int) bool {
 	return index == 0 && len(record) >= expectedFields
 }

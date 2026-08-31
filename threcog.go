@@ -9,16 +9,18 @@ import (
 )
 
 type (
-	Song                 = logic.Song
-	QuestionRequest      = logic.QuestionRequest
-	QuestionResponse     = logic.QuestionResponse
-	AnswerPayload        = logic.AnswerPayload
-	AudioPayload         = logic.AudioPayload
-	CategoriesResponse   = logic.CategoriesResponse
-	HealthResponse       = logic.HealthResponse
-	VerifyAnswerRequest  = logic.VerifyAnswerRequest
-	VerifyAnswerResponse = logic.VerifyAnswerResponse
-	Library              = logic.Library
+	Song                          = logic.Song
+	QuestionRequest               = logic.QuestionRequest
+	QuestionResponse              = logic.QuestionResponse
+	AnswerPayload                 = logic.AnswerPayload
+	AudioPayload                  = logic.AudioPayload
+	CategoriesResponse            = logic.CategoriesResponse
+	HealthResponse                = logic.HealthResponse
+	VerifyAnswerRequest           = logic.VerifyAnswerRequest
+	VerifyAnswerResponse          = logic.VerifyAnswerResponse
+	Library                       = logic.Library
+	WorksForBroadCategoryRequest  = logic.WorksForBroadCategoryRequest
+	WorksForBroadCategoryResponse = logic.WorksForBroadCategoryResponse
 )
 
 // THRecogSvc is the root package service facade.
@@ -75,6 +77,11 @@ func (s *THRecogSvc) GetAllCategories() []string {
 // GetAllWorks returns all available works (detailed categories)
 func (s *THRecogSvc) GetAllWorks() []string {
 	return s.service.GetAllWorks()
+}
+
+// GetWorksForBroadCategory returns all works belong to specified category
+func (s *THRecogSvc) GetWorksForBroadCategory(req WorksForBroadCategoryRequest) WorksForBroadCategoryResponse {
+	return s.library.GetWorksForBroadCategory(req)
 }
 
 func (s *THRecogSvc) GenerateQuestion(ctx context.Context, req QuestionRequest) (QuestionResponse, error) {

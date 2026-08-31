@@ -7,16 +7,39 @@ import (
 )
 
 func TestNewTHRecogSvc(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "sourceTHB.csv")
-	csvData := `"name","category","source_url"
-"A Sacred Lot","东方灵异传","https://upload.thwiki.cc/0/0b/A_Sacret_Lot_0.mp3"
-"上海红茶馆　～ Chinese Tea","东方红魔乡","https://upload.thwiki.cc/a/a9/th06_06.mp3"
+	dir := t.TempDir()
+
+	// Create music_list.csv
+	musicListPath := filepath.Join(dir, "music_list.csv")
+	musicListData := `music_name,music_url,translate_names
+Song A,https://thwiki.cc/Song_A,Song A JP|Song A EN
+Song B,https://thwiki.cc/Song_B,Song B JP|Song B EN
 `
-	if err := os.WriteFile(path, []byte(csvData), 0o600); err != nil {
-		t.Fatalf("write test CSV: %v", err)
+	if err := os.WriteFile(musicListPath, []byte(musicListData), 0o600); err != nil {
+		t.Fatalf("write music_list.csv: %v", err)
 	}
 
-	svc, err := NewTHRecogSvc(path)
+	// Create music_info.csv
+	musicInfoPath := filepath.Join(dir, "music_info.csv")
+	musicInfoData := `music_name,original_works,asset_url
+Song A,Work A,https://upload.thbwiki.cc/Song_A.mp3
+Song B,Work B,https://upload.thbwiki.cc/Song_B.mp3
+`
+	if err := os.WriteFile(musicInfoPath, []byte(musicInfoData), 0o600); err != nil {
+		t.Fatalf("write music_info.csv: %v", err)
+	}
+
+	// Create categories.csv
+	categoriesPath := filepath.Join(dir, "categories.csv")
+	categoriesData := `original_works,category
+Work A,Category1
+Work B,Category2
+`
+	if err := os.WriteFile(categoriesPath, []byte(categoriesData), 0o600); err != nil {
+		t.Fatalf("write categories.csv: %v", err)
+	}
+
+	svc, err := NewTHRecogSvc(musicListPath, musicInfoPath, categoriesPath)
 	if err != nil {
 		t.Fatalf("NewTHRecogSvc returned error: %v", err)
 	}

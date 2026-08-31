@@ -65,6 +65,12 @@ func answerVariants(req VerifyAnswerRequest) []string {
 
 	add(req.CorrectName)
 	add(req.CorrectAnswer)
+
+	// Add all translate names
+	for _, name := range req.TranslateNames {
+		add(name)
+	}
+
 	if req.CorrectName != "" && req.CorrectCategory != "" {
 		add(req.CorrectName + "（" + req.CorrectCategory + "）")
 	}

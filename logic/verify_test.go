@@ -50,6 +50,31 @@ func TestVerifyAnswer(t *testing.T) {
 			},
 			correct: false,
 		},
+		{
+			name: "match translate name",
+			req: VerifyAnswerRequest{
+				UserAnswer:  "Japanese Name",
+				CorrectName: "Song Name",
+				TranslateNames: []string{
+					"Japanese Name",
+					"English Name",
+					"German Name",
+				},
+			},
+			correct: true,
+		},
+		{
+			name: "partial match on translate name",
+			req: VerifyAnswerRequest{
+				UserAnswer:  "Japanese",
+				CorrectName: "Song Name",
+				TranslateNames: []string{
+					"Japanese Name",
+					"English Name",
+				},
+			},
+			correct: true,
+		},
 	}
 
 	for _, tt := range tests {

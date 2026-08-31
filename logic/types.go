@@ -1,9 +1,32 @@
 package logic
 
+// Song represents a music piece with its work and category information
 type Song struct {
-	Name     string `json:"name"`
-	Category string `json:"category"`
-	URL      string `json:"source_url"`
+	Name           string   `json:"name"`            // music_name
+	Category       string   `json:"category"`        // original_work
+	URL            string   `json:"source_url"`      // asset_url
+	TranslateNames []string `json:"translate_names"` // alternative names for the song
+	BroadCategory  string   `json:"broad_category"`  // broad category from categories.csv
+}
+
+// MusicRecord represents a row from music_list.csv
+type MusicRecord struct {
+	MusicName      string
+	MusicURL       string
+	TranslateNames []string // pipe-separated, will be split
+}
+
+// MusicInfoRecord represents a row from music_info.csv
+type MusicInfoRecord struct {
+	MusicName     string
+	OriginalWorks string
+	AssetURL      string
+}
+
+// CategoryRecord represents a row from categories.csv
+type CategoryRecord struct {
+	OriginalWorks string
+	Category      string
 }
 
 type QuestionRequest struct {
@@ -19,9 +42,10 @@ type QuestionResponse struct {
 }
 
 type AnswerPayload struct {
-	Text     string `json:"text"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
+	Text           string   `json:"text"`
+	Name           string   `json:"name"`
+	Category       string   `json:"category"`
+	TranslateNames []string `json:"translate_names"`
 }
 
 type AudioPayload struct {
@@ -47,10 +71,11 @@ type HealthResponse struct {
 }
 
 type VerifyAnswerRequest struct {
-	UserAnswer      string `json:"user_answer"`
-	CorrectAnswer   string `json:"correct_answer"`
-	CorrectName     string `json:"correct_name"`
-	CorrectCategory string `json:"correct_category"`
+	UserAnswer      string   `json:"user_answer"`
+	CorrectAnswer   string   `json:"correct_answer"`
+	CorrectName     string   `json:"correct_name"`
+	CorrectCategory string   `json:"correct_category"`
+	TranslateNames  []string `json:"translate_names"` // alternative names for the music
 }
 
 type VerifyAnswerResponse struct {

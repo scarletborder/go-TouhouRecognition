@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strings"
 )
 
 const (
@@ -24,24 +23,40 @@ func NewService(library Library) *Service {
 func (s *Service) Health() HealthResponse {
 	return HealthResponse{
 		OK:        true,
-		Source:    "THWiki",
+		Source:    "Dynamic CSV Data",
 		SongCount: s.library.SongCount(),
 	}
 }
 
+// GetAllCategories returns all available broad categories
+func (s *Service) GetAllCategories() []string {
+	return s.library.Categories()
+}
+
+// GetAllWorks returns all available works (detailed categories)
+func (s *Service) GetAllWorks() []string {
+	return s.library.Works()
+}
+
 func (s *Service) Categories() CategoriesResponse {
-	groups := map[string][]string{BroadAll: s.library.Works()}
-	for _, broad := range broadCategoryOrder {
-		if broad == BroadAll {
-			continue
+	allWorks := s.library.Works()
+	groups := make(map[string][]string)
+
+	// Add "all" group with all works
+	groups["all"] = append([]string(nil), allWorks...)
+
+	// Add category-based groups
+	for _, broadCat := range s.library.Categories() {
+		works := s.library.CategoryWorks(broadCat)
+		if len(works) > 0 {
+			groups[broadCat] = works
 		}
-		groups[broad] = existingWorksOnly(s.library.workSet, broadCategoryWorks[broad])
 	}
 
 	return CategoriesResponse{
-		Source:             "THWiki",
-		BroadCategories:    append([]string(nil), broadCategoryOrder...),
-		DetailedCategories: s.library.Works(),
+		Source:             "Dynamic CSV Data",
+		BroadCategories:    s.library.Categories(),
+		DetailedCategories: allWorks,
 		Groups:             groups,
 		SongCount:          s.library.SongCount(),
 	}
@@ -72,7 +87,7 @@ func (s *Service) GenerateQuestion(ctx context.Context, req QuestionRequest) (Qu
 
 	duration, err := probeDuration(ctx, song.URL)
 	if err != nil {
-		return QuestionResponse{}, upstreamError(fmt.Sprintf("failed to probe THWiki audio: %v", err))
+		return QuestionResponse{}, upstreamError(fmt.Sprintf("failed to probe THBWiki audio: %v", err))
 	}
 
 	start := 0.0
@@ -86,15 +101,16 @@ func (s *Service) GenerateQuestion(ctx context.Context, req QuestionRequest) (Qu
 
 	audioBytes, err := cutAudio(ctx, song.URL, start, length)
 	if err != nil {
-		return QuestionResponse{}, upstreamError(fmt.Sprintf("failed to cut THWiki audio: %v", err))
+		return QuestionResponse{}, upstreamError(fmt.Sprintf("failed to cut THBWiki audio: %v", err))
 	}
 
 	answerText := fmt.Sprintf("%s（%s）", song.Name, song.Category)
 	return QuestionResponse{
 		CorrectAnswer: AnswerPayload{
-			Text:     answerText,
-			Name:     song.Name,
-			Category: song.Category,
+			Text:           answerText,
+			Name:           song.Name,
+			Category:       song.Category,
+			TranslateNames: song.TranslateNames,
 		},
 		Audio: AudioPayload{
 			ContentType:     audioContentType,
@@ -127,24 +143,30 @@ func (s *Service) allowedWorks(broadCategories, detailedCategories, exceptDetail
 	exceptDetailedCategories = cleanList(exceptDetailedCategories)
 
 	base := map[string]struct{}{}
-	if len(broadCategories) == 0 || contains(broadCategories, BroadAll) {
+	if len(broadCategories) == 0 || contains(broadCategories, "all") {
+		// Include all available works
 		for work := range s.library.workSet {
 			base[work] = struct{}{}
 		}
 	} else {
+		// Include works from specified broad categories
 		for _, broad := range broadCategories {
-			works, ok := broadCategoryWorks[broad]
-			if !ok {
-				return nil, badRequest(fmt.Sprintf("unknown broad category %q; allowed: %s", broad, strings.Join(broadCategoryOrder, ", ")))
+			works := s.library.CategoryWorks(broad)
+			if len(works) == 0 {
+				// Check if it's a valid category
+				validCats := s.library.Categories()
+				if !contains(validCats, broad) {
+					return nil, badRequest(fmt.Sprintf("unknown broad category %q", broad))
+				}
+				continue
 			}
 			for _, work := range works {
-				if _, exists := s.library.workSet[work]; exists {
-					base[work] = struct{}{}
-				}
+				base[work] = struct{}{}
 			}
 		}
 	}
 
+	// Check that exception categories exist
 	for _, exceptDetail := range exceptDetailedCategories {
 		if _, ok := s.library.workSet[exceptDetail]; !ok {
 			return nil, badRequest(fmt.Sprintf("unknown except detailed category %q", exceptDetail))
@@ -164,8 +186,10 @@ func (s *Service) allowedWorks(broadCategories, detailedCategories, exceptDetail
 		}
 	}
 
+	// Remove exceptions
 	for _, exceptDetail := range exceptDetailedCategories {
 		delete(final, exceptDetail)
 	}
+
 	return final, nil
 }

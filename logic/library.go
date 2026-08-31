@@ -9,149 +9,190 @@ import (
 	"strings"
 )
 
-const (
-	BroadAll                   = "全部"
-	BroadMainlineDanmaku       = "弹幕正作"
-	BroadPC98                  = "旧作"
-	BroadDecimalShootingGames  = "小数点射击游戏"
-	BroadTwilightFrontierWorks = "黄昏作品"
-	BroadTH06To09              = "TH06-09"
-	BroadTH10To12              = "TH10-12"
-	BroadTH13To15              = "TH13-15"
-	BroadTH16To20              = "TH16-19"
-	BroadCD                    = "CD"
-	BroadBooks                 = "书籍"
-	BroadLenEn                 = "连缘"
-)
-
-var broadCategoryOrder = []string{
-	BroadAll,
-	BroadMainlineDanmaku,
-	BroadPC98,
-	BroadDecimalShootingGames,
-	BroadTwilightFrontierWorks,
-	BroadTH06To09,
-	BroadTH10To12,
-	BroadTH13To15,
-	BroadTH16To20,
-	BroadCD,
-	BroadBooks,
-	BroadLenEn,
-}
-
-var broadCategoryWorks = map[string][]string{
-	BroadMainlineDanmaku: {
-		"东方红魔乡",
-		"东方妖妖梦",
-		"东方永夜抄",
-		"东方花映塚",
-		"东方风神录",
-		"东方地灵殿",
-		"东方星莲船",
-		"东方神灵庙",
-		"东方辉针城",
-		"东方绀珠传",
-		"东方天空璋",
-		"东方鬼形兽",
-		"东方虹龙洞",
-		"东方兽王园",
-	},
-	BroadPC98: {
-		"东方灵异传",
-		"东方封魔录",
-		"东方梦时空",
-		"东方幻想乡",
-		"东方怪绮谈",
-	},
-	BroadDecimalShootingGames: {
-		"东方文花帖",
-		"DS东方文花帖",
-		"妖精大战争",
-		"弹幕天邪鬼",
-		"秘封噩梦日记",
-		"弹幕狂们的黑市",
-	},
-	BroadTwilightFrontierWorks: {
-		"东方萃梦想",
-		"东方绯想天",
-		"东方非想天则",
-		"东方心绮楼",
-		"东方深秘录",
-		"东方凭依华",
-		"完全凭依唱片名录",
-		"深秘乐曲集·补",
-		"暗黑能乐集心绮楼",
-		"东方刚欲异闻",
-	},
-	BroadTH06To09: {
-		"东方红魔乡",
-		"东方妖妖梦",
-		"东方永夜抄",
-		"东方花映塚",
-	},
-	BroadTH10To12: {
-		"东方风神录",
-		"东方地灵殿",
-		"东方星莲船",
-	},
-	BroadTH13To15: {
-		"东方神灵庙",
-		"东方辉针城",
-		"东方绀珠传",
-	},
-	BroadTH16To20: {
-		"东方天空璋",
-		"东方鬼形兽",
-		"东方虹龙洞",
-		"东方兽王园",
-		"东方锦上京",
-	},
-	BroadCD: {
-		"蓬莱人形",
-		"莲台野夜行",
-		"梦违科学世纪",
-		"卯酉东海道",
-		"大空魔术",
-		"未知之花 魅知之旅",
-		"鸟船遗迹",
-		"伊奘诺物质",
-		"燕石博物志",
-		"旧约酒馆",
-		"虹色的北斗七星",
-		"七夕坂梦幻能",
-		"灵长新益京",
-	},
-	BroadBooks: {
-		"东方文花帖（书籍）",
-		"东方求闻史纪",
-		"东方三月精E",
-		"东方三月精S1",
-		"东方儚月抄（漫画）",
-		"东方三月精S2",
-		"The Grimoire of Marisa",
-		"东方三月精S3",
-		"东方三月精O1",
-		"东方铃奈庵",
-	},
-	BroadLenEn: {
-		"（连缘）连缘无现里",
-		"（连缘）连缘蛇从剑",
-		"（连缘）连缘灵烈传",
-		"（连缘）连缘天影战记",
-	},
-}
+const defaultCategoryName = "other"
 
 type Library struct {
-	songs       []Song
-	works       []string
-	workSet     map[string]struct{}
-	songsByWork map[string][]Song
+	songs              []Song
+	works              []string
+	workSet            map[string]struct{}
+	songsByWork        map[string][]Song
+	categories         map[string]string   // work -> broad category
+	broadCategories    []string            // sorted list of unique broad categories
+	broadCategoryWorks map[string][]string // broad category -> works
 }
 
-func LoadTHWikiLibrary(sourcePath string) (Library, error) {
-	file, err := os.Open(sourcePath)
+// LoadLibrary loads music data from three CSV files:
+// - musicListPath: music_list.csv with columns (music_name, music_url, translate_names)
+// - musicInfoPath: music_info.csv with columns (music_name, original_works, asset_url)
+// - categoriesPath: categories.csv with columns (original_works, category)
+func LoadLibrary(musicListPath, musicInfoPath, categoriesPath string) (Library, error) {
+	// Load music_list.csv
+	musicList, err := loadMusicList(musicListPath)
 	if err != nil {
-		return Library{}, err
+		return Library{}, fmt.Errorf("failed to load music_list.csv: %w", err)
+	}
+	musicListSet := make(map[string]struct{})
+	musicNameToTranslate := make(map[string][]string)
+	for _, record := range musicList {
+		musicListSet[record.MusicName] = struct{}{}
+		musicNameToTranslate[record.MusicName] = record.TranslateNames
+	}
+
+	// Load music_info.csv
+	musicInfo, err := loadMusicInfo(musicInfoPath)
+	if err != nil {
+		return Library{}, fmt.Errorf("failed to load music_info.csv: %w", err)
+	}
+
+	// Load categories.csv
+	categories, err := loadCategories(categoriesPath)
+	if err != nil {
+		return Library{}, fmt.Errorf("failed to load categories.csv: %w", err)
+	}
+	categoryMap := make(map[string]string)
+	for _, record := range categories {
+		categoryMap[record.OriginalWorks] = record.Category
+	}
+
+	// Preprocess: Filter and build Song list
+	// 1. Only keep songs that exist in music_list
+	// 2. Remove songs that have no asset_url in any work version
+	// 3. Each song-work pair must have asset_url
+	songs, works, songsByWork := preprocessMusicData(musicInfo, musicListSet, musicNameToTranslate, categoryMap)
+
+	if len(songs) == 0 {
+		return Library{}, errors.New("no valid songs after preprocessing")
+	}
+
+	workSet := make(map[string]struct{})
+	for work := range songsByWork {
+		workSet[work] = struct{}{}
+	}
+
+	// Build broad categories from the categories data
+	broadCatMap := make(map[string]map[string]struct{})
+	for work, broadCat := range categoryMap {
+		if _, ok := workSet[work]; !ok {
+			continue
+		}
+		if broadCatMap[broadCat] == nil {
+			broadCatMap[broadCat] = make(map[string]struct{})
+		}
+		broadCatMap[broadCat][work] = struct{}{}
+	}
+
+	// Add works without explicit category to "other"
+	for work := range workSet {
+		if _, ok := categoryMap[work]; !ok {
+			broadCat := defaultCategoryName
+			if broadCatMap[broadCat] == nil {
+				broadCatMap[broadCat] = make(map[string]struct{})
+			}
+			broadCatMap[broadCat][work] = struct{}{}
+		}
+	}
+
+	// Convert to sorted lists
+	var broadCategories []string
+	broadCategoryWorks := make(map[string][]string)
+	for broadCat, workMap := range broadCatMap {
+		broadCategories = append(broadCategories, broadCat)
+		var workList []string
+		for work := range workMap {
+			workList = append(workList, work)
+		}
+		sort.Strings(workList)
+		broadCategoryWorks[broadCat] = workList
+	}
+	sort.Strings(broadCategories)
+
+	return Library{
+		songs:              songs,
+		works:              works,
+		workSet:            workSet,
+		songsByWork:        songsByWork,
+		categories:         categoryMap,
+		broadCategories:    broadCategories,
+		broadCategoryWorks: broadCategoryWorks,
+	}, nil
+}
+
+func preprocessMusicData(
+	musicInfo []MusicInfoRecord,
+	musicListSet map[string]struct{},
+	musicNameToTranslate map[string][]string,
+	categoryMap map[string]string,
+) ([]Song, []string, map[string][]Song) {
+	// First pass: collect all valid music_name-work-url combinations
+	// and filter by music_list
+	type musicWorkURL struct {
+		musicName string
+		work      string
+		url       string
+	}
+	var validCombinations []musicWorkURL
+
+	musicHasValidVersion := make(map[string]bool)
+	for _, info := range musicInfo {
+		if _, ok := musicListSet[info.MusicName]; !ok {
+			continue // Not in music_list, skip
+		}
+		if info.AssetURL != "" {
+			validCombinations = append(validCombinations, musicWorkURL{
+				musicName: info.MusicName,
+				work:      info.OriginalWorks,
+				url:       info.AssetURL,
+			})
+			musicHasValidVersion[info.MusicName] = true
+		}
+	}
+
+	// Build songs and group by work
+	var songs []Song
+	songsByWork := make(map[string][]Song)
+	works := make(map[string]struct{})
+
+	// Track which combinations we've added to avoid duplicates
+	added := make(map[string]struct{})
+
+	for _, combo := range validCombinations {
+		key := combo.musicName + "|" + combo.work + "|" + combo.url
+		if _, ok := added[key]; ok {
+			continue
+		}
+		added[key] = struct{}{}
+
+		song := Song{
+			Name:           combo.musicName,
+			Category:       combo.work,
+			URL:            combo.url,
+			TranslateNames: musicNameToTranslate[combo.musicName],
+		}
+		if cat, ok := categoryMap[combo.work]; ok {
+			song.BroadCategory = cat
+		} else {
+			song.BroadCategory = defaultCategoryName
+		}
+
+		songs = append(songs, song)
+		songsByWork[combo.work] = append(songsByWork[combo.work], song)
+		works[combo.work] = struct{}{}
+	}
+
+	// Sort works
+	workList := make([]string, 0, len(works))
+	for work := range works {
+		workList = append(workList, work)
+	}
+	sort.Strings(workList)
+
+	return songs, workList, songsByWork
+}
+
+func loadMusicList(path string) ([]MusicRecord, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
 	defer file.Close()
 
@@ -161,52 +202,139 @@ func LoadTHWikiLibrary(sourcePath string) (Library, error) {
 
 	records, err := reader.ReadAll()
 	if err != nil {
-		return Library{}, err
+		return nil, err
 	}
 
-	var songs []Song
-	workSet := map[string]struct{}{}
-	songsByWork := map[string][]Song{}
-	for index, record := range records {
-		if isCSVHeader(index, record) || isBlankCSVRecord(record) {
+	var result []MusicRecord
+	for idx, record := range records {
+		if isCSVHeader(idx, record, 3) || isBlankCSVRecord(record) {
 			continue
 		}
 		if len(record) != 3 {
-			return Library{}, fmt.Errorf("invalid CSV record at line %d: expected 3 fields, got %d", index+1, len(record))
+			return nil, fmt.Errorf("invalid music_list.csv record at line %d: expected 3 fields, got %d", idx+1, len(record))
 		}
 
-		song := Song{
-			Name:     strings.TrimSpace(record[0]),
-			Category: strings.TrimSpace(record[1]),
-			URL:      strings.TrimSpace(record[2]),
-		}
-		if song.Name == "" || song.Category == "" || song.URL == "" {
-			return Library{}, fmt.Errorf("empty CSV field at line %d", index+1)
-		}
-		if !strings.HasPrefix(song.URL, "https://upload.thwiki.cc/") {
-			return Library{}, fmt.Errorf("non-THWiki audio URL found for %q: %s", song.Name, song.URL)
+		musicName := strings.TrimSpace(record[0])
+		musicURL := strings.TrimSpace(record[1])
+		translateNamesStr := strings.TrimSpace(record[2])
+
+		if musicName == "" {
+			return nil, fmt.Errorf("empty music_name at line %d", idx+1)
 		}
 
-		songs = append(songs, song)
-		workSet[song.Category] = struct{}{}
-		songsByWork[song.Category] = append(songsByWork[song.Category], song)
+		var translateNames []string
+		if translateNamesStr != "" {
+			for _, name := range strings.Split(translateNamesStr, "|") {
+				if trimmed := strings.TrimSpace(name); trimmed != "" {
+					translateNames = append(translateNames, trimmed)
+				}
+			}
+		}
+
+		result = append(result, MusicRecord{
+			MusicName:      musicName,
+			MusicURL:       musicURL,
+			TranslateNames: translateNames,
+		})
 	}
-	if len(songs) == 0 {
-		return Library{}, errors.New("no songs parsed from THWiki CSV")
+
+	if len(result) == 0 {
+		return nil, errors.New("no records found in music_list.csv")
 	}
 
-	works := make([]string, 0, len(workSet))
-	for work := range workSet {
-		works = append(works, work)
-	}
-	sort.Strings(works)
+	return result, nil
+}
 
-	return Library{
-		songs:       songs,
-		works:       works,
-		workSet:     workSet,
-		songsByWork: songsByWork,
-	}, nil
+func loadMusicInfo(path string) ([]MusicInfoRecord, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+	reader.TrimLeadingSpace = true
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []MusicInfoRecord
+	for idx, record := range records {
+		if isCSVHeader(idx, record, 3) || isBlankCSVRecord(record) {
+			continue
+		}
+		if len(record) != 3 {
+			return nil, fmt.Errorf("invalid music_info.csv record at line %d: expected 3 fields, got %d", idx+1, len(record))
+		}
+
+		musicName := strings.TrimSpace(record[0])
+		originalWork := strings.TrimSpace(record[1])
+		assetURL := strings.TrimSpace(record[2])
+
+		if musicName == "" || originalWork == "" {
+			return nil, fmt.Errorf("empty music_name or original_work at line %d", idx+1)
+		}
+
+		result = append(result, MusicInfoRecord{
+			MusicName:     musicName,
+			OriginalWorks: originalWork,
+			AssetURL:      assetURL,
+		})
+	}
+
+	if len(result) == 0 {
+		return nil, errors.New("no records found in music_info.csv")
+	}
+
+	return result, nil
+}
+
+func loadCategories(path string) ([]CategoryRecord, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+	reader.TrimLeadingSpace = true
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []CategoryRecord
+	for idx, record := range records {
+		if isCSVHeader(idx, record, 2) || isBlankCSVRecord(record) {
+			continue
+		}
+		if len(record) != 2 {
+			return nil, fmt.Errorf("invalid categories.csv record at line %d: expected 2 fields, got %d", idx+1, len(record))
+		}
+
+		originalWork := strings.TrimSpace(record[0])
+		category := strings.TrimSpace(record[1])
+
+		if originalWork == "" || category == "" {
+			return nil, fmt.Errorf("empty original_work or category at line %d", idx+1)
+		}
+
+		result = append(result, CategoryRecord{
+			OriginalWorks: originalWork,
+			Category:      category,
+		})
+	}
+
+	if len(result) == 0 {
+		return nil, errors.New("no records found in categories.csv")
+	}
+
+	return result, nil
 }
 
 func (l Library) SongCount() int {
@@ -225,12 +353,19 @@ func (l Library) Songs() []Song {
 	return append([]Song(nil), l.songs...)
 }
 
-func isCSVHeader(index int, record []string) bool {
-	return index == 0 &&
-		len(record) == 3 &&
-		strings.EqualFold(strings.TrimSpace(record[0]), "name") &&
-		strings.EqualFold(strings.TrimSpace(record[1]), "category") &&
-		strings.EqualFold(strings.TrimSpace(record[2]), "source_url")
+func (l Library) Categories() []string {
+	return append([]string(nil), l.broadCategories...)
+}
+
+func (l Library) CategoryWorks(broadCategory string) []string {
+	if works, ok := l.broadCategoryWorks[broadCategory]; ok {
+		return append([]string(nil), works...)
+	}
+	return nil
+}
+
+func isCSVHeader(index int, record []string, expectedFields int) bool {
+	return index == 0 && len(record) >= expectedFields
 }
 
 func isBlankCSVRecord(record []string) bool {

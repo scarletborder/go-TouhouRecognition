@@ -8,21 +8,6 @@ import (
 	"github.com/scarletborder/go-TouhouRecognition/logic"
 )
 
-const (
-	BroadAll                   = logic.BroadAll
-	BroadMainlineDanmaku       = logic.BroadMainlineDanmaku
-	BroadPC98                  = logic.BroadPC98
-	BroadDecimalShootingGames  = logic.BroadDecimalShootingGames
-	BroadTwilightFrontierWorks = logic.BroadTwilightFrontierWorks
-	BroadTH06To09              = logic.BroadTH06To09
-	BroadTH10To12              = logic.BroadTH10To12
-	BroadTH13To15              = logic.BroadTH13To15
-	BroadTH16To20              = logic.BroadTH16To20
-	BroadCD                    = logic.BroadCD
-	BroadBooks                 = logic.BroadBooks
-	BroadLenEn                 = logic.BroadLenEn
-)
-
 type (
 	Song                 = logic.Song
 	QuestionRequest      = logic.QuestionRequest
@@ -40,17 +25,21 @@ type (
 //
 // The original logic package remains public and compatible. This type exists so
 // applications can use the module from its root import path for the common
-// workflows: loading the THWiki CSV, listing categories, generating questions,
+// workflows: loading music data from CSV files, listing categories, generating questions,
 // and verifying answers.
 type THRecogSvc struct {
 	library Library
 	service *logic.Service
 }
 
-// NewTHRecogSvc loads a THWiki CSV library from sourcePath and returns a ready
-// to use recognition service.
-func NewTHRecogSvc(sourcePath string) (*THRecogSvc, error) {
-	library, err := logic.LoadTHWikiLibrary(sourcePath)
+// NewTHRecogSvc loads music data from three CSV files and returns a ready-to-use service.
+//
+// Parameters:
+//   - musicListPath: path to music_list.csv (music_name, music_url, translate_names)
+//   - musicInfoPath: path to music_info.csv (music_name, original_works, asset_url)
+//   - categoriesPath: path to categories.csv (original_works, category)
+func NewTHRecogSvc(musicListPath, musicInfoPath, categoriesPath string) (*THRecogSvc, error) {
+	library, err := logic.LoadLibrary(musicListPath, musicInfoPath, categoriesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +54,9 @@ func NewTHRecogSvcFromLibrary(library Library) *THRecogSvc {
 	}
 }
 
-// LoadTHWikiLibrary keeps the common loader available from the root package.
-func LoadTHWikiLibrary(sourcePath string) (Library, error) {
-	return logic.LoadTHWikiLibrary(sourcePath)
+// LoadLibrary loads music library data from three CSV files.
+func LoadLibrary(musicListPath, musicInfoPath, categoriesPath string) (Library, error) {
+	return logic.LoadLibrary(musicListPath, musicInfoPath, categoriesPath)
 }
 
 func (s *THRecogSvc) Health() HealthResponse {
@@ -76,6 +65,16 @@ func (s *THRecogSvc) Health() HealthResponse {
 
 func (s *THRecogSvc) Categories() CategoriesResponse {
 	return s.service.Categories()
+}
+
+// GetAllCategories returns all available broad categories
+func (s *THRecogSvc) GetAllCategories() []string {
+	return s.service.GetAllCategories()
+}
+
+// GetAllWorks returns all available works (detailed categories)
+func (s *THRecogSvc) GetAllWorks() []string {
+	return s.service.GetAllWorks()
 }
 
 func (s *THRecogSvc) GenerateQuestion(ctx context.Context, req QuestionRequest) (QuestionResponse, error) {

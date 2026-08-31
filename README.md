@@ -254,17 +254,6 @@ original_works,category
 4. Build Library → organize songs by work, works by category
 5. Ready for question generation and answer verification
 
-Existing code can keep using the original subpackage:
-
-```go
-import "github.com/XiaoGeNekidora/go-TouhouRecognition/logic"
-
-library, err := logic.LoadTHWikiLibrary("sourceTHB.csv")
-service := logic.NewService(library)
-```
-
-No existing public `logic` functions or types were removed.
-
 ## Test
 
 ```bash
